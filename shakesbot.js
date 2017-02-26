@@ -50,7 +50,7 @@ exports.handler = (event, context, callback) => {
       }
 
     // API call to Open Trivia DB
-      request("https://www.opentdb.com/api.php?amount=1&difficulty=easy", function(error, response, body) {
+      request("http://www.xmlme.com/WSShakespeare.asmx?op=GetSpeech", function(error, response, body) {
 
          var json = JSON.parse(body);
 
