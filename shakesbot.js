@@ -50,51 +50,46 @@ exports.handler = (event, context, callback) => {
       }
 
     // API call to Open Trivia DB
-      request("http://www.xmlme.com/WSShakespeare.asmx?op=GetSpeech", function(error, response, body) {
+      // We need this to build our post string
+        var querystring = require('querystring');
+        var http = require('http');
+        var fs = require('fs');
 
-         var json = JSON.parse(body);
+        function PostCode(codestring) {
+           // Build the post string from an object
+           var post_data = querystring.stringify({
+               'compilation_level' : 'ADVANCED_OPTIMIZATIONS',
+               'output_format': 'json',
+               'output_info': 'compiled_code',
+               'warning_level' : 'QUIET',
+               'js_code' : codestring
+  });
 
-         var qrArray = []; // prepare an array that contains quickReplies to display
+  // An object of options to indicate where to post to
+  var post_options = {
+      host: 'closure-compiler.appspot.com',
+      port: '80',
+      path: '/compile',
+      method: 'POST',
+      headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Length': Buffer.byteLength(post_data)
+      }
+  };
 
-         qrArray.push(replaceHTMLEntities(json.results[0].correct_answer)); // push the correct answer to this question
+  // Set up the request
+  var post_req = http.request(post_options, function(res) {
+      res.setEncoding('utf8');
+      res.on('data', function (chunk) {
+          console.log('Response: ' + chunk);
+      });
+  });
 
-         for (var i = 0; i < json.results[0].incorrect_answers.length; i++) {
-          qrArray.push(replaceHTMLEntities(json.results[0].incorrect_answers[i])); // push each of the incorrect answers to list as multiple choice options
-         }
-
-        shuffle(qrArray); // shuffle the quick replies so that the correct one is not always first
-
-        // display results from last question and append next trivia question
-        responseJSON.response = responseJSON.response+" ::next-1000:: "+replaceHTMLEntities(json.results[0].question);
-
-        responseJSON.quickReplies = qrArray; // add our quick replies object to the callback JSON
-
-        // store the current correct answer in customPayload so that it can be compared against their answer
-        responseJSON.customPayload = replaceHTMLEntities(json.results[0].correct_answer);
+  // post the data
 
         // return the data to Motion AI!
         callback(null, responseJSON);
 
       });
 };
-
-// functions used above
-function shuffle(a) {
-    var j, x, i;
-    for (i = a.length; i; i--) {
-        j = Math.floor(Math.random() * i);
-        x = a[i - 1];
-        a[i - 1] = a[j];
-        a[j] = x;
-    }
-}
-
-function getRandomInt(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-// this is only needed because our demo lives on FB Messenger, where HTML is not supported
-function replaceHTMLEntities(str) {
- 	str = str.replace(/&quot;/g, '"');
- 	return str.replace(/&(.*?);/g, '');
 }
